@@ -8,7 +8,6 @@ class GraphEditor:
         self.gte_graph = plots[1]
         self.lte_graph = plots[2]
         self.solution_graph = plots[0]
-        plt.figure(dpi=1200)
 
     def generate_gte_graph(self):
         self.gte_graph.set_xlabel('x')
@@ -23,28 +22,14 @@ class GraphEditor:
         self.solution_graph.set_ylabel('y')
 
     @staticmethod
-    def generate_legend():
+    def show_figure():
         leg = plt.legend(["exact_solution", "euler", "improved_euler", "runge_kutta"],
                          loc='upper center', bbox_to_anchor=(0.5, 3.8), fancybox=True, ncol=4)
         colors = ["black", "green", "blue", "orange"]
         for i, j in enumerate(leg.legendHandles):
             j.set_color(colors[i])
-        for handle in leg.legendHandles:
-            handle.set_linewidth(5)
 
-    def generate_figure(self):
-        self.generate_gte_graph()
-        self.generate_lte_graph()
-        self.generate_solution_graph()
-        self.generate_legend()
-
-    @staticmethod
-    def show_figure():
         plt.show()
-
-    @staticmethod
-    def save_graph():
-        plt.savefig('filename.png')
 
 
 class Equation:
@@ -108,7 +93,7 @@ class NumericalMethod:
     def supplement_graph(self, x, y, lte, gte):
         self.graph_editor.gte_graph.scatter(x, gte, s=1, color=self.method_color, label=self.method_name)
         self.graph_editor.lte_graph.scatter(x, lte, s=1, color=self.method_color, label=self.method_name)
-        self.graph_editor.solution_graph.scatter(x, y, s=1, color=self.method_color, label=self.method_name,)
+        self.graph_editor.solution_graph.scatter(x, y, s=1, color=self.method_color, label=self.method_name)
 
 
 class EulerMethod(NumericalMethod):
@@ -225,46 +210,57 @@ class RungeKutta(NumericalMethod):
             k += self.step
 
 
-X0 = math.pi
-Y0 = 1
-X = 4 * math.pi
-STEP = 0.5
+class UserWorkspace:
+    def __init__(self):
+        self.X0, self.Y0, self.X, self.STEP = math.pi, 1, 4 * math.pi, 0.5
+        self.gr_edit = GraphEditor()
 
-print('X0 = π, Y0 = 1, X = 4π, STEP = 0.5. Do you want to change this values? 1-yes, 2-no')
-ans = input()
-while True:
-    if ans == '1':
-        print('enter X0 value, please:')
-        X0 = int(input())
-        print('enter X0 value, please:')
-        Y0 = int(input())
-        print('enter X0 value, please:')
-        X = int(input())
-        print('enter STEP value, please:')
-        STEP = int(input())
-        print('thank you!')
-        break
-    elif ans == '2':
-        print('ok')
-        break
-    else:
-        print('incorrect answer: try again')
+    def data_correction(self):
+        print('X0 = π, Y0 = 1, X = 4π, STEP = 0.5. Do you want to change this values? 1-yes, 2-no')
         ans = input()
+        while True:
+            if ans == '1':
+                print('enter X0 value, please:')
+                x0 = int(input())
+                print('enter X0 value, please:')
+                y0 = int(input())
+                print('enter X0 value, please:')
+                x = int(input())
+                print('enter STEP value, please:')
+                step = int(input())
+                print('thank you!')
+                self.X0, self.Y0, self.X, self.STEP = x0, y0, x, step
+                break
+            elif ans == '2':
+                print('ok')
+                break
+            else:
+                print('incorrect answer: try again')
+                ans = input()
 
-gr_edit = GraphEditor()
+    def generate_methods(self):
+        diff_eq = DifferentialEquation(self.X0, self.X, self.Y0, self.gr_edit)
+        diff_eq.exact_solution(self.STEP)
 
-diff_eq = DifferentialEquation(X0, X, Y0, gr_edit)
-diff_eq.exact_solution(STEP)
+        euler_method = EulerMethod(self.STEP, diff_eq, self.gr_edit)
+        euler_method.method_implementation()
 
-euler_method = EulerMethod(STEP, diff_eq, gr_edit)
-euler_method.method_implementation()
+        improved_euler = ImproverEuler(self.STEP, diff_eq, self.gr_edit)
+        improved_euler.method_implementation()
 
-improved_euler = ImproverEuler(STEP, diff_eq, gr_edit)
-improved_euler.method_implementation()
+        runge_kutta = RungeKutta(self.STEP, diff_eq, self.gr_edit)
+        runge_kutta.method_implementation()
 
-runge_kutta = RungeKutta(STEP, diff_eq, gr_edit)
-runge_kutta.method_implementation()
+    def generate_graphs(self):
+        self.gr_edit.generate_gte_graph()
+        self.gr_edit.generate_lte_graph()
+        self.gr_edit.generate_solution_graph()
+        self.gr_edit.show_figure()
 
-gr_edit.generate_figure()
-gr_edit.show_figure()
-gr_edit.save_graph()
+
+workspace = UserWorkspace()
+workspace.data_correction()
+workspace.generate_methods()
+workspace.generate_graphs()
+
+
