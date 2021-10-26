@@ -4,10 +4,12 @@ import matplotlib.pyplot as plt
 
 class GraphEditor:
     def __init__(self):
-        figure, plots = plt.subplots(nrows=3, ncols=1)
-        self.gte_graph = plots[1]
-        self.lte_graph = plots[2]
-        self.solution_graph = plots[0]
+        self.gte_fig = plt.figure('GTE')
+        self.gte_graph = self.gte_fig.add_subplot(111)
+        self.lte_fig = plt.figure('LTE')
+        self.lte_graph = self.lte_fig.add_subplot(111)
+        self.solution_fig = plt.figure('methods')
+        self.solution_graph = self.solution_fig.add_subplot(111)
 
     def generate_gte_graph(self):
         self.gte_graph.set_xlabel('x')
@@ -22,12 +24,23 @@ class GraphEditor:
         self.solution_graph.set_ylabel('y')
 
     @staticmethod
-    def show_figure():
-        leg = plt.legend(["exact_solution", "euler", "improved_euler", "runge_kutta"],
-                         loc='upper center', bbox_to_anchor=(0.5, 3.8), fancybox=True, ncol=4)
-        colors = ["black", "green", "blue", "orange"]
-        for i, j in enumerate(leg.legendHandles):
-            j.set_color(colors[i])
+    def generate_legend(graph, is_methods):
+        if is_methods:
+            leg = graph.legend(["exact_solution", "euler", "improved_euler", "runge_kutta"],
+                               loc='upper center', fancybox=True, ncol=4)
+            colors = ["black", "green", "blue", "orange"]
+            for i, j in enumerate(leg.legendHandles):
+                j.set_color(colors[i])
+        else:
+            leg = graph.legend(["euler", "improved_euler", "runge_kutta"], loc='upper center', fancybox=True, ncol=4)
+            colors = ["green", "blue", "orange"]
+            for i, j in enumerate(leg.legendHandles):
+                j.set_color(colors[i])
+
+    def show_figure(self):
+        self.generate_legend(self.lte_fig, False)
+        self.generate_legend(self.gte_fig, False)
+        self.generate_legend(self.solution_fig, True)
 
         plt.show()
 
@@ -63,7 +76,7 @@ class DifferentialEquation(Equation):
         k = self.x0
 
         while k < self.x + step:
-            self.graph_editor.solution_graph.scatter(k, self.get_y(k), s=1, color='black', label='exact')
+            self.graph_editor.solution_graph.scatter(k, self.get_y(k), s=2, color='black', label='exact')
             self.print_format(k, self.get_y(k))
             k += step
 
@@ -91,9 +104,9 @@ class NumericalMethod:
         print('{:.4f}'.format(y), 'LTE:', '{:.4f}'.format(lte), 'GTE:', '{:.4f}'.format(gte))
 
     def supplement_graph(self, x, y, lte, gte):
-        self.graph_editor.gte_graph.scatter(x, gte, s=1, color=self.method_color, label=self.method_name)
-        self.graph_editor.lte_graph.scatter(x, lte, s=1, color=self.method_color, label=self.method_name)
-        self.graph_editor.solution_graph.scatter(x, y, s=1, color=self.method_color, label=self.method_name)
+        self.graph_editor.gte_graph.scatter(x, gte, s=2, color=self.method_color, label=self.method_name)
+        self.graph_editor.lte_graph.scatter(x, lte, s=2, color=self.method_color, label=self.method_name)
+        self.graph_editor.solution_graph.scatter(x, y, s=2, color=self.method_color, label=self.method_name)
 
 
 class EulerMethod(NumericalMethod):
