@@ -138,7 +138,7 @@ class NumericalMethod:
         lte_arr.append(lte)
 
         if with_print:
-            print('Euler method:')
+            print('%s:', self.method_name)
             self.supplement_graph(x_prev, y_prev, lte, gte)
             self.print_format(x_prev, y_prev, lte, gte)
 
@@ -225,12 +225,12 @@ class UserWorkspace:
             if ans == '1':
                 print('enter X0 value, please:')
                 x0 = int(input())
-                print('enter X0 value, please:')
+                print('enter Y0 value, please:')
                 y0 = int(input())
-                print('enter X0 value, please:')
+                print('enter X value, please:')
                 x = int(input())
                 print('enter STEP value, please:')
-                step = int(input())
+                step = float(input())
                 print('thank you!')
                 self.X0, self.Y0, self.X, self.STEP = x0, y0, x, step
                 break
