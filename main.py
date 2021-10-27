@@ -5,11 +5,16 @@ import matplotlib.pyplot as plt
 class GraphEditor:
     def __init__(self):
         self.gte_fig = plt.figure('GTE')
-        self.gte_graph = self.gte_fig.add_subplot(111)
         self.lte_fig = plt.figure('LTE')
-        self.lte_graph = self.lte_fig.add_subplot(111)
         self.solution_fig = plt.figure('methods')
+        self.lte_investigation_fig = plt.figure('LTE investigation')
+        self.gte_investigation_fig = plt.figure('GTE investigation')
+
+        self.gte_graph = self.gte_fig.add_subplot(111)
+        self.lte_graph = self.lte_fig.add_subplot(111)
         self.solution_graph = self.solution_fig.add_subplot(111)
+        self.lte_investigation_graph = self.lte_investigation_fig.add_subplot(111)
+        self.gte_investigation_graph = self.gte_investigation_fig.add_subplot(111)
 
     def generate_gte_graph(self):
         self.gte_graph.set_xlabel('x')
@@ -22,6 +27,14 @@ class GraphEditor:
     def generate_solution_graph(self):
         self.solution_graph.set_xlabel('x')
         self.solution_graph.set_ylabel('y')
+
+    def generate_gte_investigation_graph(self):
+        self.gte_investigation_graph.set_xlabel('step')
+        self.gte_investigation_graph.set_ylabel('GTE')
+
+    def generate_lte_investigation_graph(self):
+        self.lte_investigation_graph.set_xlabel('step')
+        self.lte_investigation_graph.set_ylabel('LTE')
 
     @staticmethod
     def generate_legend(graph, is_methods):
@@ -41,6 +54,8 @@ class GraphEditor:
         self.generate_legend(self.lte_fig, False)
         self.generate_legend(self.gte_fig, False)
         self.generate_legend(self.solution_fig, True)
+        self.generate_legend(self.gte_investigation_graph, False)
+        self.generate_legend(self.lte_investigation_graph, False)
 
         plt.show()
 
@@ -108,16 +123,10 @@ class NumericalMethod:
         self.graph_editor.lte_graph.scatter(x, lte, s=2, color=self.method_color, label=self.method_name)
         self.graph_editor.solution_graph.scatter(x, y, s=2, color=self.method_color, label=self.method_name)
 
+    def method_implementation(self, with_print, with_lte_gte_max, calculate_next):
+        lte_arr = []
+        gte_arr = []
 
-class EulerMethod(NumericalMethod):
-    def __init__(self, step, differential_equation, graph_editor):
-        NumericalMethod.__init__(self, step, differential_equation, graph_editor, 'euler', 'green')
-
-    def euler_next(self, x_prev, y_prev):
-        return y_prev + self.step * DifferentialEquation.get_y_prime(x_prev, y_prev)
-
-    def method_implementation(self):
-        print('Euler method:')
         y_prev = self.differential_equation.y0
         x_prev = self.differential_equation.x0
         k = self.differential_equation.x0 + self.step
@@ -125,23 +134,58 @@ class EulerMethod(NumericalMethod):
         gte = self.get_gte(y_prev, DifferentialEquation.get_y(x_prev))
         lte = self.get_lte(y_prev, DifferentialEquation.get_y(x_prev))
 
-        self.supplement_graph(x_prev, y_prev, lte, gte)
-        self.print_format(x_prev, y_prev, lte, gte)
+        gte_arr.append(gte)
+        lte_arr.append(lte)
+
+        if with_print:
+            print('Euler method:')
+            self.supplement_graph(x_prev, y_prev, lte, gte)
+            self.print_format(x_prev, y_prev, lte, gte)
 
         while k <= self.differential_equation.x + self.step:
-            y_next = self.euler_next(x_prev, y_prev)
+            y_next = calculate_next(x_prev, y_prev)
             x_next = k
 
             gte = self.get_gte(y_next, DifferentialEquation.get_y(x_next))
-            lte = self.get_lte(self.euler_next(x_prev, DifferentialEquation.get_y(x_prev)),
+            lte = self.get_lte(calculate_next(x_prev, DifferentialEquation.get_y(x_prev)),
                                DifferentialEquation.get_y(x_next))
 
-            self.supplement_graph(x_next, y_next, lte, gte)
-            self.print_format(x_next, y_next, lte, gte)
+            gte_arr.append(gte)
+            lte_arr.append(lte)
+
+            if with_print:
+                self.supplement_graph(x_next, y_next, lte, gte)
+                self.print_format(x_next, y_next, lte, gte)
 
             x_prev = x_next
             y_prev = y_next
             k += self.step
+
+        if with_lte_gte_max:
+            return max(lte_arr), max(gte_arr)
+
+    def lte_gte_investigation(self, calculate_next):
+        max_step = self.step * 10
+        min_step = self.step / 10
+
+        i = min_step
+        while i < max_step:
+            max_lte, max_gte = self.method_implementation(False, True, calculate_next)
+
+            self.graph_editor.lte_investigation_graph.scatter(i, max_lte, s=2, color=self.method_color,
+                                                              label=self.method_name)
+            self.graph_editor.gte_investigation_graph.scatter(i, max_gte, s=2, color=self.method_color,
+                                                              label=self.method_name)
+
+            i += min_step
+
+
+class EulerMethod(NumericalMethod):
+    def __init__(self, step, differential_equation, graph_editor):
+        NumericalMethod.__init__(self, step, differential_equation, graph_editor, 'euler', 'green')
+
+    def euler_next(self, x_prev, y_prev):
+        return y_prev + self.step * DifferentialEquation.get_y_prime(x_prev, y_prev)
 
 
 class ImproverEuler(NumericalMethod):
@@ -153,33 +197,6 @@ class ImproverEuler(NumericalMethod):
                DifferentialEquation.get_y_prime(x_prev + self.step / 2,
                                                 y_prev + self.step / 2 * DifferentialEquation.get_y_prime(x_prev,
                                                                                                           y_prev))
-
-    def method_implementation(self):
-        print('Improved method:')
-        y_prev = self.differential_equation.y0
-        x_prev = self.differential_equation.x0
-        k = self.differential_equation.x0 + self.step
-
-        gte = self.get_gte(y_prev, DifferentialEquation.get_y(x_prev))
-        lte = self.get_lte(y_prev, DifferentialEquation.get_y(x_prev))
-
-        self.supplement_graph(x_prev, y_prev, lte, gte)
-        self.print_format(x_prev, y_prev, lte, gte)
-
-        while k <= self.differential_equation.x + self.step:
-            y_next = self.improved_euler_next(x_prev, y_prev)
-            x_next = k
-
-            gte = self.get_gte(y_next, DifferentialEquation.get_y(x_next))
-            lte = self.get_lte(self.improved_euler_next(x_prev, DifferentialEquation.get_y(x_prev)),
-                               DifferentialEquation.get_y(x_next))
-
-            self.supplement_graph(x_next, y_next, lte, gte)
-            self.print_format(x_next, y_next, lte, gte)
-
-            x_prev = x_next
-            y_prev = y_next
-            k += self.step
 
 
 class RungeKutta(NumericalMethod):
@@ -194,33 +211,6 @@ class RungeKutta(NumericalMethod):
         k_sum = k1 + 2 * k2 + 2 * k3 + k4
 
         return y_prev + self.step / 6 * k_sum
-
-    def method_implementation(self):
-        print('Runge Kutta method:')
-        y_prev = self.differential_equation.y0
-        x_prev = self.differential_equation.x0
-        k = self.differential_equation.x0 + self.step
-
-        gte = self.get_gte(y_prev, DifferentialEquation.get_y(x_prev))
-        lte = self.get_lte(y_prev, DifferentialEquation.get_y(x_prev))
-
-        self.supplement_graph(x_prev, y_prev, lte, gte)
-        self.print_format(x_prev, y_prev, lte, gte)
-
-        while k <= self.differential_equation.x + self.step:
-            y_next = self.runge_kutta_next(x_prev, y_prev)
-            x_next = k
-
-            gte = self.get_gte(y_next, DifferentialEquation.get_y(x_next))
-            lte = self.get_lte(self.runge_kutta_next(x_prev, DifferentialEquation.get_y(x_prev)),
-                               DifferentialEquation.get_y(x_next))
-
-            self.supplement_graph(x_next, y_next, lte, gte)
-            self.print_format(x_next, y_next, lte, gte)
-
-            x_prev = x_next
-            y_prev = y_next
-            k += self.step
 
 
 class UserWorkspace:
@@ -256,24 +246,31 @@ class UserWorkspace:
         diff_eq.exact_solution(self.STEP)
 
         euler_method = EulerMethod(self.STEP, diff_eq, self.gr_edit)
-        euler_method.method_implementation()
+        euler_method.method_implementation(True, False, euler_method.euler_next)
+        euler_method.lte_gte_investigation(euler_method.euler_next)
 
         improved_euler = ImproverEuler(self.STEP, diff_eq, self.gr_edit)
-        improved_euler.method_implementation()
+        improved_euler.method_implementation(True, False, improved_euler.improved_euler_next)
+        improved_euler.lte_gte_investigation(improved_euler.improved_euler_next)
 
         runge_kutta = RungeKutta(self.STEP, diff_eq, self.gr_edit)
-        runge_kutta.method_implementation()
+        runge_kutta.method_implementation(True, False, runge_kutta.runge_kutta_next)
+        runge_kutta.lte_gte_investigation(runge_kutta.runge_kutta_next)
 
     def generate_graphs(self):
         self.gr_edit.generate_gte_graph()
         self.gr_edit.generate_lte_graph()
         self.gr_edit.generate_solution_graph()
+        self.gr_edit.generate_gte_investigation_graph()
+        self.gr_edit.generate_lte_investigation_graph()
+
         self.gr_edit.show_figure()
+
+    def launch(self):
+        self.data_correction()
+        self.generate_methods()
+        self.generate_graphs()
 
 
 workspace = UserWorkspace()
-workspace.data_correction()
-workspace.generate_methods()
-workspace.generate_graphs()
-
-
+workspace.launch()
