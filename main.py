@@ -117,7 +117,7 @@ class NumericalMethod:
         self.graph_editor.lte_graph.scatter(x, lte, s=2, color=self.method_color, label=self.method_name)
         self.graph_editor.solution_graph.scatter(x, y, s=2, color=self.method_color, label=self.method_name)
 
-    def method_implementation(self, step, with_print, with_lte_gte_max, calculate_next):
+    def method_implementation(self, step, with_print, with_gte_max, calculate_next):
         gte_arr = []
 
         y_prev = self.differential_equation.y0
@@ -127,7 +127,7 @@ class NumericalMethod:
         gte = self.get_gte(y_prev, DifferentialEquation.get_y(x_prev))
         lte = self.get_lte(y_prev, DifferentialEquation.get_y(x_prev))
 
-        if with_lte_gte_max:
+        if with_gte_max:
             gte_arr.append(gte)
 
         if with_print:
@@ -143,7 +143,7 @@ class NumericalMethod:
             lte = self.get_lte(calculate_next(x_prev, DifferentialEquation.get_y(x_prev)),
                                DifferentialEquation.get_y(x_next))
 
-            if with_lte_gte_max:
+            if with_gte_max:
                 gte_arr.append(gte)
 
             if with_print:
@@ -154,19 +154,16 @@ class NumericalMethod:
             y_prev = y_next
             k += step
 
-        if with_lte_gte_max:
+        if with_gte_max:
             return max(gte_arr)
 
-    def gte_investigation(self, calculate_next, min_step, max_step):
-        k = (max_step - min_step) / 100
-        step = min_step
-        while step < max_step:
+    def gte_investigation(self, calculate_next, max_num_of_steps):
+        for i in range(max_num_of_steps, 1, -1):
+            step = (self.differential_equation.x - self.differential_equation.x0) / i
             max_gte = self.method_implementation(step, False, True, calculate_next)
 
             self.graph_editor.gte_investigation_graph.scatter(step, max_gte, s=2, color=self.method_color,
                                                               label=self.method_name)
-
-            step += k
 
 
 class EulerMethod(NumericalMethod):
@@ -183,9 +180,8 @@ class ImproverEuler(NumericalMethod):
 
     def improved_euler_next(self, x_prev, y_prev):
         return y_prev + self.step * \
-               DifferentialEquation.get_y_prime(x_prev + self.step / 2,
-                                                y_prev + self.step / 2 * DifferentialEquation.get_y_prime(x_prev,
-                                                                                                          y_prev))
+               DifferentialEquation.get_y_prime(x_prev + self.step / 2, y_prev + self.step / 2 *
+                                                DifferentialEquation.get_y_prime(x_prev, y_prev))
 
 
 class RungeKutta(NumericalMethod):
@@ -206,7 +202,7 @@ class UserWorkspace:
     def __init__(self):
         self.X0, self.Y0, self.X, self.STEP = math.pi, 1, 4 * math.pi, 0.5
         self.gr_edit = GraphEditor()
-        self.MIN_STEP, self.MAX_STEP = 0.1, 1000
+        self.MAX_NUM_OF_STEPS = 10
 
     def data_correction(self):
         print('X0 = π, Y0 = 1, X = 4π, STEP = 0.5. Do you want to change this values? 1-yes, 2-no')
@@ -231,17 +227,13 @@ class UserWorkspace:
                 print('incorrect answer: try again')
                 ans = input()
 
-        print('Step is ranging from MIN_STEP=0.1 to MAX_STEP=1000 (for GTE investigation). '
-              'Do you want to change this values? 1-yes, 2-no', sep='')
+        print('The maximal number of steps is 10. Do you want to change this value? 1-yes, 2-no', sep='')
         ans = input()
         while True:
             if ans == '1':
-                print('enter STEP1 value, please:')
-                min_step = float(input())
-                print('enter STEP2 value, please:')
-                max_step = float(input())
-                print('thank you!')
-                self.MIN_STEP, self.MAX_STEP = min_step, max_step
+                print('enter the number of steps, please:')
+                n = int(input())
+                self.MAX_NUM_OF_STEPS = n
                 break
             elif ans == '2':
                 print('ok')
@@ -256,15 +248,15 @@ class UserWorkspace:
 
         euler_method = EulerMethod(self.STEP, diff_eq, self.gr_edit)
         euler_method.method_implementation(self.STEP, True, False, euler_method.euler_next)
-        euler_method.gte_investigation(euler_method.euler_next, self.MIN_STEP, self.MAX_STEP)
+        euler_method.gte_investigation(euler_method.euler_next, self.MAX_NUM_OF_STEPS)
 
         improved_euler = ImproverEuler(self.STEP, diff_eq, self.gr_edit)
         improved_euler.method_implementation(self.STEP, True, False, improved_euler.improved_euler_next)
-        improved_euler.gte_investigation(improved_euler.improved_euler_next, self.MIN_STEP, self.MAX_STEP)
+        improved_euler.gte_investigation(improved_euler.improved_euler_next, self.MAX_NUM_OF_STEPS)
 
         runge_kutta = RungeKutta(self.STEP, diff_eq, self.gr_edit)
         runge_kutta.method_implementation(self.STEP, True, False, runge_kutta.runge_kutta_next)
-        runge_kutta.gte_investigation(runge_kutta.runge_kutta_next, self.MIN_STEP, self.MAX_STEP)
+        runge_kutta.gte_investigation(runge_kutta.runge_kutta_next, self.MAX_NUM_OF_STEPS)
 
     def generate_graphs(self):
         self.gr_edit.generate_solution_graph()
